@@ -1,9 +1,3 @@
-//
-//  firebase_projectApp.swift
-//  firebase_project
-//
-//  Created by Gaming Lab on 14/11/24.
-//
 
 import SwiftUI
 import FirebaseCore

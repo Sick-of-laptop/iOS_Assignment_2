@@ -16,7 +16,8 @@ struct ContentView: View {
     @State private var isLoggedIn = false
     @State private var isSignUp = true
     @State private var userName = ""
-    
+    @State private var errorMessage = ""
+
     let db = Firestore.firestore()
 
     var body: some View {
@@ -25,7 +26,7 @@ struct ContentView: View {
                 .ignoresSafeArea()
             
             RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .foregroundStyle(.linearGradient(colors: [.pink, .red], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .foregroundStyle(.linearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(width: 1000, height: 400)
                 .rotationEffect(.degrees(135))
                 .offset(y: -350)
@@ -44,7 +45,7 @@ struct ContentView: View {
                             .frame(width: 200, height: 40)
                             .background(
                                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(.linearGradient(colors: [.pink, .red], startPoint: .top, endPoint: .bottomTrailing)))
+                                    .fill(.linearGradient(colors: [.blue, .cyan], startPoint: .top, endPoint: .bottomTrailing)))
                             .foregroundColor(.white)
                     }
                     .padding(.top)
@@ -55,26 +56,9 @@ struct ContentView: View {
                             .font(.system(size: 40, weight: .bold, design: .rounded))
                             .offset(x: -100, y: -100)
                         
-                        TextField("Name", text: $name)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(10)
-                            .frame(width: 350)
-                        
-                        TextField("Email", text: $email)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(10)
-                            .frame(width: 350)
-                        
-                        SecureField("Password", text: $password)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(10)
-                            .frame(width: 350)
+                        CustomTextField(placeholder: "Name", text: $name)
+                        CustomTextField(placeholder: "Email", text: $email)
+                        CustomSecureField(placeholder: "Password", text: $password)
                         
                         Button {
                             signUp()
@@ -84,7 +68,7 @@ struct ContentView: View {
                                 .frame(width: 200, height: 40)
                                 .background(
                                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .fill(.linearGradient(colors: [.pink, .red], startPoint: .top, endPoint: .bottomTrailing)))
+                                        .fill(.linearGradient(colors: [.blue, .cyan], startPoint: .top, endPoint: .bottomTrailing)))
                                 .foregroundColor(.white)
                         }
                         
@@ -98,25 +82,19 @@ struct ContentView: View {
                         .padding(.top)
                         .offset(y: 110)
                     } else {
-                        
                         Text("Login")
                             .foregroundColor(.white)
                             .font(.system(size: 40, weight: .bold, design: .rounded))
                             .offset(x: -100, y: -100)
                         
-                        TextField("Email", text: $email)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(10)
-                            .frame(width: 350)
+                        CustomTextField(placeholder: "Email", text: $email)
+                        CustomSecureField(placeholder: "Password", text: $password)
                         
-                        SecureField("Password", text: $password)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(10)
-                            .frame(width: 350)
+                        if !errorMessage.isEmpty {
+                            Text(errorMessage)
+                                .foregroundColor(.red)
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                        }
                         
                         Button {
                             login()
@@ -126,7 +104,7 @@ struct ContentView: View {
                                 .frame(width: 200, height: 40)
                                 .background(
                                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .fill(.linearGradient(colors: [.pink, .red], startPoint: .top, endPoint: .bottomTrailing)))
+                                        .fill(.linearGradient(colors: [.blue, .cyan], startPoint: .top, endPoint: .bottomTrailing)))
                                 .foregroundColor(.white)
                         }
                         
@@ -149,7 +127,7 @@ struct ContentView: View {
     func signUp() {
         Auth.auth().createUser(withEmail: email, password: password) { result, error in
             if let error = error {
-                print("Error creating user: \(error.localizedDescription)")
+                errorMessage = "Error creating user: \(error.localizedDescription)"
             } else {
                 let userRef = db.collection("users").document(result!.user.uid)
                 userRef.setData([
@@ -157,9 +135,8 @@ struct ContentView: View {
                     "email": email
                 ]) { err in
                     if let err = err {
-                        print("Error saving user data: \(err.localizedDescription)")
+                        errorMessage = "Error saving user data: \(err.localizedDescription)"
                     } else {
-                        print("User created and data saved to Firestore")
                         isLoggedIn = true
                         userName = name
                     }
@@ -171,18 +148,17 @@ struct ContentView: View {
     func login() {
         Auth.auth().signIn(withEmail: email, password: password) { result, error in
             if let error = error {
-                print("Error signing in: \(error.localizedDescription)")
+                errorMessage = "Invalid login credentials. Please try again."
             } else {
                 let userRef = db.collection("users").document(result!.user.uid)
                 userRef.getDocument { (document, error) in
                     if let document = document, document.exists {
                         if let userData = document.data() {
                             userName = userData["name"] as? String ?? "Unknown"
-                            print("User signed in successfully: \(result?.user.email ?? "Unknown email")")
                             isLoggedIn = true
                         }
                     } else {
-                        print("User data not found")
+                        errorMessage = "User data not found."
                     }
                 }
             }
@@ -195,7 +171,43 @@ struct ContentView: View {
             isLoggedIn = false
             userName = ""
         } catch {
-            print("Error logging out: \(error.localizedDescription)")
+            errorMessage = "Error logging out: \(error.localizedDescription)"
         }
+    }
+}
+
+struct CustomTextField: View {
+    var placeholder: String
+    @Binding var text: String
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .foregroundColor(.white)
+            .padding()
+            .background(Color.gray.opacity(0.2))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.white.opacity(0.5), lineWidth: 1)
+            )
+            .frame(width: 350)
+    }
+}
+
+struct CustomSecureField: View {
+    var placeholder: String
+    @Binding var text: String
+
+    var body: some View {
+        SecureField(placeholder, text: $text)
+            .foregroundColor(.white)
+            .padding()
+            .background(Color.gray.opacity(0.2))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.white.opacity(0.5), lineWidth: 1)
+            )
+            .frame(width: 350)
     }
 }
